@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CameraCapture } from './components/CameraCapture'
 import { AuthenticationReport } from './components/AuthenticationReport'
+import { DemoMode } from './components/DemoMode'
 import { authenticateItem, isGeminiConfigured } from './services/gemini'
 import type { AuthenticationResult, ScanProgress } from './types'
 import './App.css'
@@ -14,11 +15,14 @@ function App() {
   const [result, setResult] = useState<AuthenticationResult | null>(null)
   const [progress, setProgress] = useState<ScanProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showDemo, setShowDemo] = useState(false)
+  const [isDemoResult, setIsDemoResult] = useState(false)
 
   const handleCapture = useCallback(async (imageData: string) => {
     setScanning(true)
     setError(null)
     setResult(null)
+    setIsDemoResult(false)
 
     try {
       const authResult = await authenticateItem(imageData, {}, setProgress)
@@ -37,6 +41,7 @@ function App() {
     setView('scanner')
     setResult(null)
     setError(null)
+    setIsDemoResult(false)
   }, [])
 
   const handleBackHome = useCallback(() => {
@@ -45,7 +50,52 @@ function App() {
     setScanning(false)
     setProgress(null)
     setError(null)
+    setIsDemoResult(false)
   }, [])
+
+  const handleDemoSelect = useCallback((demoResult: AuthenticationResult) => {
+    setResult(demoResult)
+    setIsDemoResult(true)
+    setShowDemo(false)
+    setView('results')
+  }, [])
+
+  const handleShareResult = useCallback(async () => {
+    if (!result) return
+
+    const shareText = [
+      `GRAIL SCANNER - Authentication Report`,
+      ``,
+      `Status: ${result.isAuthentic ? 'AUTHENTIC' : 'SUSPECT'}`,
+      `Confidence: ${result.confidence}%`,
+      `Brand: ${result.brandEra.brand}`,
+      `Era: ${result.brandEra.era} (${result.brandEra.yearRange[0]}-${result.brandEra.yearRange[1]})`,
+      `Estimated Value: $${result.marketData.estimatedValue.low} - $${result.marketData.estimatedValue.high}`,
+      ``,
+      result.verifiedMarkers.length > 0
+        ? `Verified: ${result.verifiedMarkers.join(', ')}`
+        : '',
+      result.redFlags.length > 0
+        ? `Red Flags: ${result.redFlags.join(', ')}`
+        : '',
+      ``,
+      `Scanned with GRAIL SCANNER - AI forensic authentication`,
+    ].filter(Boolean).join('\n')
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'GRAIL SCANNER Report',
+          text: shareText,
+        })
+      } catch {
+        // User cancelled or share failed - fall back to clipboard
+        await copyToClipboard(shareText)
+      }
+    } else {
+      await copyToClipboard(shareText)
+    }
+  }, [result])
 
   const configured = isGeminiConfigured()
 
@@ -123,14 +173,25 @@ function App() {
                   </div>
                 )}
 
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleStartScan}
-                  className="w-full scan-gradient text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transition-shadow"
-                >
-                  Start Scanning
-                </motion.button>
+                <div className="flex gap-3">
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleStartScan}
+                    className="flex-1 scan-gradient text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transition-shadow"
+                  >
+                    Start Scanning
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setShowDemo(true)}
+                    className="bg-white/10 hover:bg-white/20 text-white font-bold py-4 px-6 rounded-xl text-lg transition-colors border border-white/20"
+                  >
+                    Demo
+                  </motion.button>
+                </div>
               </div>
 
               {/* Features Grid */}
@@ -173,6 +234,7 @@ function App() {
                 onCapture={handleCapture}
                 onError={(err) => setError(err)}
                 scanning={scanning}
+                progress={progress}
               />
 
               {/* Progress Display */}
@@ -215,16 +277,47 @@ function App() {
                 >
                   ← New Scan
                 </button>
-                <button
-                  onClick={handleStartScan}
-                  className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Scan Again
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleShareResult}
+                    className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                    title="Share result"
+                  >
+                    Share
+                  </button>
+                  <button
+                    onClick={handleStartScan}
+                    className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                  >
+                    Scan Again
+                  </button>
+                </div>
               </div>
+
+              {isDemoResult && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 bg-purple-500/10 border border-purple-500/30 rounded-xl p-3 text-center"
+                >
+                  <p className="text-purple-300 text-sm">
+                    Demo result — scan a real item with your camera for live Gemini 3 analysis
+                  </p>
+                </motion.div>
+              )}
 
               <AuthenticationReport result={result} progress={null} scanning={false} />
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Demo Mode Modal */}
+        <AnimatePresence>
+          {showDemo && (
+            <DemoMode
+              onSelectDemo={handleDemoSelect}
+              onClose={() => setShowDemo(false)}
+            />
           )}
         </AnimatePresence>
 
@@ -243,6 +336,23 @@ function App() {
       </div>
     </div>
   )
+}
+
+/** Copy text to clipboard with fallback */
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+    textArea.style.position = 'fixed'
+    textArea.style.opacity = '0'
+    document.body.appendChild(textArea)
+    textArea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textArea)
+  }
 }
 
 const FEATURES = [

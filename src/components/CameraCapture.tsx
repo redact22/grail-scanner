@@ -1,15 +1,18 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ScanOverlay } from './ScanOverlay'
+import type { ScanProgress } from '../types'
 
 interface CameraCaptureProps {
   onCapture: (imageData: string) => void
   onError?: (error: string) => void
   scanning?: boolean
+  progress?: ScanProgress | null
 }
 
 type CameraState = 'idle' | 'requesting' | 'active' | 'captured' | 'error'
 
-export function CameraCapture({ onCapture, onError, scanning = false }: CameraCaptureProps) {
+export function CameraCapture({ onCapture, onError, scanning = false, progress = null }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -175,41 +178,11 @@ export function CameraCapture({ onCapture, onError, scanning = false }: CameraCa
           )}
         </AnimatePresence>
 
-        {/* Scan Overlay */}
-        <AnimatePresence>
-          {scanning && cameraState === 'captured' && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 pointer-events-none"
-            >
-              {/* Scan line animation */}
-              <motion.div
-                className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_rgba(34,211,238,0.8)]"
-                animate={{ top: ['0%', '100%', '0%'] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-              />
-
-              {/* Corner brackets */}
-              <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-cyan-400" />
-              <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-cyan-400" />
-              <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-cyan-400" />
-              <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-cyan-400" />
-
-              {/* Scanning text */}
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
-                <motion.div
-                  animate={{ opacity: [1, 0.5, 1] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                  className="text-cyan-400 text-sm font-mono bg-black/50 px-3 py-1 rounded"
-                >
-                  FORENSIC SCAN IN PROGRESS...
-                </motion.div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Enhanced Scan Overlay */}
+        <ScanOverlay
+          visible={scanning && cameraState === 'captured'}
+          progress={progress}
+        />
 
         {/* Idle / Error State */}
         {(cameraState === 'idle' || cameraState === 'error') && (

@@ -4,7 +4,7 @@
 // thinking levels, and self-correction
 // ============================================================
 
-import { GoogleGenerativeAI, FunctionDeclarationSchemaType } from '@google/generative-ai'
+import { GoogleGenerativeAI, SchemaType, type FunctionDeclaration } from '@google/generative-ai'
 import type {
   AuthenticationResult,
   GeminiConfig,
@@ -82,15 +82,15 @@ Call each relevant tool and synthesize the results into a final assessment.`
 }
 
 /** Tool declarations for Gemini function calling */
-const toolDeclarations = [
+const toolDeclarations: FunctionDeclaration[] = [
   {
     name: 'rn_lookup',
     description: 'Look up an RN (Registered Number) or WPL (Wool Products Label) number to identify the manufacturer and registration year. RN numbers are assigned by the FTC to US textile manufacturers.',
     parameters: {
-      type: FunctionDeclarationSchemaType.OBJECT,
+      type: SchemaType.OBJECT,
       properties: {
         rn_number: {
-          type: FunctionDeclarationSchemaType.STRING,
+          type: SchemaType.STRING,
           description: 'The RN or WPL number found on the garment label (e.g., "RN 42850" or "WPL 12345")',
         },
       },
@@ -101,18 +101,18 @@ const toolDeclarations = [
     name: 'brand_patterns',
     description: 'Verify brand-specific authentication markers for a given brand and era. Checks label fonts, tag placement, hardware details, and era-specific patterns.',
     parameters: {
-      type: FunctionDeclarationSchemaType.OBJECT,
+      type: SchemaType.OBJECT,
       properties: {
         brand: {
-          type: FunctionDeclarationSchemaType.STRING,
+          type: SchemaType.STRING,
           description: 'The brand name to verify (e.g., "Nike", "Levis", "Ralph Lauren")',
         },
         era: {
-          type: FunctionDeclarationSchemaType.STRING,
+          type: SchemaType.STRING,
           description: 'The suspected era/decade (e.g., "1990s", "1980s", "early 2000s")',
         },
         markers: {
-          type: FunctionDeclarationSchemaType.STRING,
+          type: SchemaType.STRING,
           description: 'Comma-separated list of authentication markers observed (e.g., "swoosh logo, white tag, made in USA")',
         },
       },
@@ -123,18 +123,18 @@ const toolDeclarations = [
     name: 'date_forensics',
     description: 'Perform forensic dating analysis based on construction techniques, materials, and manufacturing details visible in the garment.',
     parameters: {
-      type: FunctionDeclarationSchemaType.OBJECT,
+      type: SchemaType.OBJECT,
       properties: {
         category: {
-          type: FunctionDeclarationSchemaType.STRING,
+          type: SchemaType.STRING,
           description: 'Item category (e.g., "jacket", "shirt", "pants", "shoes")',
         },
         construction_details: {
-          type: FunctionDeclarationSchemaType.STRING,
+          type: SchemaType.STRING,
           description: 'Observed construction details (e.g., "single-needle stitching, bar-tack reinforcement, YKK zipper")',
         },
         materials: {
-          type: FunctionDeclarationSchemaType.STRING,
+          type: SchemaType.STRING,
           description: 'Observed materials (e.g., "100% cotton, heavy denim, selvedge edge")',
         },
       },
@@ -145,18 +145,18 @@ const toolDeclarations = [
     name: 'market_search',
     description: 'Search for current market pricing and recent sales data for an authenticated vintage item. Returns comparable sales, estimated value range, and market trends.',
     parameters: {
-      type: FunctionDeclarationSchemaType.OBJECT,
+      type: SchemaType.OBJECT,
       properties: {
         item_description: {
-          type: FunctionDeclarationSchemaType.STRING,
+          type: SchemaType.STRING,
           description: 'Full description of the item (e.g., "1992 Nike Air windbreaker jacket, size L, teal colorway")',
         },
         brand: {
-          type: FunctionDeclarationSchemaType.STRING,
+          type: SchemaType.STRING,
           description: 'Brand name',
         },
         era: {
-          type: FunctionDeclarationSchemaType.STRING,
+          type: SchemaType.STRING,
           description: 'Era/year range',
         },
       },
